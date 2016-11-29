@@ -1,0 +1,2208 @@
+FORMAT: 1A
+HOST: http://polls.apiblueprint.org/
+
+# Barkler
+
+Barkler api
+
+## Authorization [/auth]
+
+- Minden http request `Content-type: application/json`-t küld és fogad, kivéve, ha mást írunk lentebb
+- Minden API endpoint standard http headerekkel és http hibakódokkal dolgozik
+- Ha a kliensnek van auth tokene (azaz “be van jelentkezve”), akkor minden további http requesthez csatolnia kell egy `Authorization: Bearer <auth token>` headert
+
+### Login [POST /auth/login]
+
+Bejelentkezés egy felhasználóként e-mail címmel és jelszóval.
+
+Ez az endpoint sikeres bejelentkezés esetén egy JWT tokent ( https://jwt.io ) ad vissza. A token a következőket tartalmazza:
+
+```
+{
+    "roles": [], //array of strings, másolat a belépett user entity `roles` mezőjéről
+    "sub": 2, //string/int user unique id
+    "iss": "http://barkler.dev/v1/auth/login", //string token származási helye
+    "iat": 1464959200, //int unix timestamp, token létrehozásának időpontja
+    "exp": 1464962800, //int unix timestamp, token lejáratának időpontja
+    "nbf": 1464959200, //int unix timestamp, token érvényesség kezdetének időpontja
+    "jti": "45ac5cd03267ce11158177ec61c1bbc5" //string token unique id
+ }
+```
+
++ Request (application/json)
+
+    + Body
+    
+            {
+                "email": "string"
+                "password": "willo1234"
+            }
+
++ Response 200 (application/json)
+
+    + Body
+        
+            {
+                "token": "<auth token>",
+            }
+
+### Reset password [POST /auth/password/reset]
+
+Elfelejtett jelszavas e-mail kérése. A laraveles beépített jelszócserés megoldást használja.
+
++ Request (application/json)
+
+    + Body
+    
+            {
+                "email": "string"
+            }
+
++ Response 200 (application/json)
+
++ Response 404 (application/json)
+
+### Facebook auth[POST /auth/facebook]
+
+Authorize a user based on a facebook account. If the corresponding account does not exists, the API must create it.
+
++ Request (application/json)
+        
+    + Body 
+            {
+               
+                "token": "",
+                "role": "",
+                "redirect_uri": "", 
+            }
+            
++ Response 200 (application/json)
+
+    + Body
+        
+            {
+                "token": "<auth token>",
+            }
+            
++ Response 201 (application/json)
+
+    + Body
+        
+            {
+                "token": "<auth token>",
+            }
+### Google auth[POST /auth/google]
+
+Authorize a user based on a google account. If the corresponding account does not exists, the API must create it.
+
+Szükséges scope-ok:
+
+profile
+email
+
++ Request (application/json)
+        
+    + Body 
+            {
+              
+                "token": "",
+                "role": "", 
+                "redirect_uri": "", kérted
+            }
+            
++ Response 200 (application/json)
+
+    + Body
+        
+            {
+                "token": "<auth token>",
+            }
+            
++ Response 201 (application/json)
+
+    + Body
+        
+            {
+                "token": "<auth token>",
+            }
+
+
+
+    
+
+## User [/user]
+
+### Get a single User [GET /user/:id]
+
+Egy felhasználó adatlapjának lekérdezése.
+
+Az `email` field csak akkor látszik, ha a saját adatlapunkat kérdezzük le.
+
+Csak bejelentkezve, és csak a saját adatlapunkat lehet lekérdezni.
+
++ Response 200 (application/json)
+
+    + Attribute (User)
+
+### Create a New User [POST]
+
+Új felhasználó létrehozása (regisztráció)
+
+- username: kötelező, csak kisbetű-nagybetű-szám-pont, min 3 karakter, max 255 karakter, egyedi a rendszerben
+- email: kötelező, egyedi
+- password: kötelező, min. 6 karakter
+- phone_number:  min 3 karakter, max 255 karakter
+- address:  min 3 karakter, max 255 karakter, nem kell validálni a cím helyességét semmilyen módon mert szabadszavas
+
++ Request (application/json)
+
+        {
+            "username"      : "string",
+            "email"         : "string",
+            "password"      : "string",
+            "phone_number"  : "string",
+            "address"       : "string",
+        }
+
++ Response 201 (application/json)
+
++ Response 409 (application/json)
+
++ Response 422 (application/json)
+
+### Edit a user [PUT]
+
+Felhasználó adatlapjának szerkesztése.
+
+Csak bejelentkezve, és csak a saját adatlapunkat lehet szerkeszteni. És csak a felsorolt mezőket.
+
+Szabályok ugyanazok, `mint a POST /user`-nél.
+
+Ha olyan mezőt szerkesztetnénk, amit nem lehet szerkeszteni, vagy nem létezik a mező, akkor azokat figyelmen kívül hagyja az API. Ha teljesen hiányzik egy mező a requestből, akkor azt is figyelmen kívül hagyja az API.
+
++ Request (application/json)
+
+        {
+            "password"      : "string",
+            "phone_number"  : "string",
+            "address"       : "string",
+        }
+
++ Response 200 (application/json)
+        
+## User Profile Picture [/user/:id/profile_picture/current{?width,height}]
+### Get a user's Profile Picture [GET]
+
+Felhasználó profilképének lekérdezése.
+
+Bejelentkezés nélkül is elérhető.
+
+Ha nincs megadva valamelyik paraméter, akkor 300x300 a default.
+
++ Parameters
+        
+    + width (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a szélességbe
+    + height (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a magasságba
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: image/jpg
+
++ Response 301
+
+    + Headers
+
+                Location: http://path.to/image/file
+        
++ Response 302
+
+    + Headers
+
+                Location: http://path.to/image/file
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: application/json
+            
++ Response 200
+
+        + Body (application/json)
+        
+                {
+                    "id": "", //int/string unique id
+                    "thumbnail_uri": "", //string abszolút url a kép kért méretű változatához
+                    "thumbnail_size": { //object a thumbnail_uri-ban visszaadott kép valódi méretei
+                        "width": 0,
+                        "height": 0
+                    },
+                    "is_placeholder": false, //boolean a kép egy placeholder-e
+                }
+
+### Create a Profile Picture [POST]
+
+Új profilkép feltöltése egy felhasználóhoz.
+
+Csak bejelentkezve, és csak a sajátunkat lehet szerkeszteni.
+
++ Request (image/jpg)
+
++ Response 200
+
+        (contents of the image)
+
++ Request (image/png)
+
++ Response 200
+
+        a képfájl, binárisan
+        
++ Response 412
+
++ Response 415
+
+## Dogs [/dog{?query,size,age_min,age_max,related_organisation_id,related_organisation_type,related_organisation_type,sex,has_related_organisation,color,breed,is_lost,has_related_organisation,is_found,page}]
+
+### List all dogs [GET]
+
+A rendszerben levő összes kutya lekérdezése.
+
+Bejelentkezés nélkül is elérhető.
+
++ Parameters
+    + query  (string, `dog`, optional) keresési kifejezés
+    + size (array, `size[]=small,size[]=medium`, optional)
+    + age_min  (number, `1`)
+    + age_max  (number, `2`)
+    + `related_organisation_id` (optional, number)
+    + `related_organisation_type` (optional, number)
+    + `has_related_organisation` (optional, boolean)
+    + sex (string, `male`, optional)
+    + color (string, `black`, optional)
+    + breed (string, `Border Collie`, optional)
+    + is_lost (optional, boolean, `true`)
+    + is_found (optional, boolean, `true`)
+    + page (optional,number, `1`)
+    
+
++ Response 200 (application/json)
+
+    + Attribute (Dogs_list)
+    
+### Get a single Dog [GET /dog/{id}]
+
+Bejelentkezés nélkül is elérhető.
+
++ Response 200 (application/json)
+
+    + Attribute (Dog)
+        
+## A User's dogs [/user/{userId}/dog{?query,size,age_min,age_max,related_organisation_id,related_organisation_type,related_organisation_type,sex,has_related_organisation,color,breed,is_lost,has_related_organisation,is_found,page}]
+### List a User's dogs [GET]
+
+Egy bizonyos felhasználó kutyáinak lekérdezése.
+
+Csak bejelentkezve, és csak a sajátunkat lehet lekérdezni.
+
++ Parameters
+    + query  (string, `dog`, optional) keresési kifejezés
+    + size (array, `size[]=small,size[]=medium`, optional)
+    + age_min  (number, `1`)
+    + age_max  (number, `2`)
+    + `related_organisation_id` (optional, number)
+    + `related_organisation_type` (optional, number)
+    + `has_related_organisation` (optional, boolean)
+    + sex (string, `male`, optional)
+    + color (string, `black`, optional)
+    + breed (string, `Border Collie`, optional)
+    + is_lost (optional, boolean, `true`)
+    + is_found (optional, boolean, `true`)
+    + page (optional,number, `0`)
+    
+
++ Response 200 (application/json)
+
+    + Attribute (Dogs_list)
+            
+
+### Get a single Dog [GET /user/{userId}/dog/{id}]
+
+Csak bejelentkezve, és csak a sajátunkat lehet lekérdezni.
+
++ Response 200 (application/json)
+
+    + Attribute (Dog)
+    
++ Response 404 (application/json)
+
+### Create a New Dog [POST]
+
+Egy kutya létrehozása egy bizonyos felhasználó alá. 
+
+Csak bejelentkezve, és csak a sajátunkhoz lehet létrehozni.
+
+A `related_user`-t automatikusan beállítja az aktuálisan bejelentkezett felhasználóra.
+
+- name: kötelező, max 64 karakter, szabadszavas
+- note: opcionális, max 2000 karakter, szabadszavas
+- size: kötelező, egy a következők közül: "small","medium","large"
+- color: kötelező, max 64 karakter, szabadszavas
+- breed: kötelező, max 64 karakter, szabadszavas
+- location: kötelező
+- is_lost: opcionális, default: false,
+
++ Request (application/json)
+
+        {
+            "name"  : "string",
+            "note"      : "string",
+            "size"  : "string", //"small","medium","large"
+            "birth_year"   : "int",
+            "sex"       : "string", //"male", "female"
+            "color"     : "string", //szabadszavas
+            "breed"     : "string", //szabadszavas
+            "location"  : {
+                "formatted_address": "", //string google mapsből származó `formatted_address`
+                "lat": 0.0, //float google mapsből származó lat
+                "lng": 0.0, //float google mapsből származó lng
+                /**
+                 * string felhasználó által begépelt/módosított cím
+                 * (opcionális, default: "formatted_address"-ből átmásolt érték)
+                 *
+                 * az esetek döntő többségében ez ugyanaz lesz, mint a `formatted_address`
+                 *
+                 * ha van input mező, ahova a felhasználó megadhat címet, akkor ez annak az input mezőnek az értéke (míg a `formatted_address` a google maps reverse geocodingja által visszaadott string, amit a felhasználó nem módosíthat)
+                 */
+                "display_address": "", //
+            },
+            "is_lost": boolean,
+            "deleted_at":"0000-00-00 00:00:00"
+        }
+
++ Response 201 (application/json)
+
+### Edit a Dog [PUT /user/{userId}/dog/{id}]
+
+Felhasználó saját kutyájának szerkesztése.
+
+Csak bejelentkezve, és csak a sajátunkat lehet szerkeszteni.
+
+A szabályok ugyanazok, mint a `POST /user/{userId}/dog`-nál.
+
++ Request (application/json)
+
+        {
+            "name"  : "string",
+            "note"      : "string",
+            "size"  : "string", //"small","medium","large"
+            "birth_year"   : "int",
+            "related_organisation"   : {/*ogranisaton object*/},
+            "sex"       : "string", //"male", "female"
+            "color"     : "string", //szabadszavas
+            "breed"     : "string", //szabadszavas
+            "location"  : {
+                "formatted_address": "", //string google mapsből származó `formatted_address`
+                "lat": 0.0, //float google mapsből származó lat
+                "lng": 0.0, //float google mapsből származó lng
+                /**
+                 * string felhasználó által begépelt/módosított cím
+                 * (opcionális, default: "formatted_address"-ből átmásolt érték)
+                 *
+                 * az esetek döntő többségében ez ugyanaz lesz, mint a `formatted_address`
+                 *
+                 * ha van input mező, ahova a felhasználó megadhat címet, akkor ez annak az input mezőnek az értéke (míg a `formatted_address` a google maps reverse geocodingja által visszaadott string, amit a felhasználó nem módosíthat)
+                 */
+                "display_address": "", //
+            },
+            "is_lost": boolean,
+            "deleted_at":"0000-00-00 00:00:00"
+        }
+
++ Response 200 (application/json)
+
+
+### Delete a dog [DELETE /dog/:id]
+
+Saját kutyám töröltnek jelölése.
+
+Csak bejelentkezve, és csak a sajátunkat lehet szerkeszteni.
+
++ Response 200 (application/json)
+
+        {
+        
+        }
+        
+## An organisation's dogs [/organisation/{organisationId}/dog{?query,size,age_min,age_max,related_organisation_id,related_organisation_type,related_organisation_type,sex,has_related_organisation,color,breed,is_lost,has_related_organisation,is_found,page}]
+
+### Create a New Dog [POST]
+
+Egy kutya létrehozása egy bizonyos Organisation entity alá. 
+
+Ezt nem kell implementálni most, mert még nem tudjuk, hogy hogyan fog ez működni.
+
++ Request (application/json)
+
+        {
+            "name"  : "string",
+            "note"      : "string",
+            "size"  : "string", //"small","medium","large"
+            "birth_year"   : "int",
+            "sex"       : "string", //"male", "female"
+            "color"     : "string", //szabadszavas
+            "breed"     : "string", //szabadszavas
+            "location"  : {
+                "formatted_address": "", //string google mapsből származó `formatted_address`
+                "lat": 0.0, //float google mapsből származó lat
+                "lng": 0.0, //float google mapsből származó lng
+                /**
+                 * string felhasználó által begépelt/módosított cím
+                 * (opcionális, default: "formatted_address"-ből átmásolt érték)
+                 *
+                 * az esetek döntő többségében ez ugyanaz lesz, mint a `formatted_address`
+                 *
+                 * ha van input mező, ahova a felhasználó megadhat címet, akkor ez annak az input mezőnek az értéke (míg a `formatted_address` a google maps reverse geocodingja által visszaadott string, amit a felhasználó nem módosíthat)
+                 */
+                "display_address": "", //
+            },
+            "is_lost": boolean,
+        }
+
++ Response 201 (application/json)
+
+### Edit a Dog [PUT /user/{userId}/dog/{id}]
+
+Felhasználó saját kutyájának szerkesztése.
+
+Csak bejelentkezve, és csak a sajátunkat lehet szerkeszteni.
+
+A szabályok ugyanazok, mint a `POST /user/{userId}/dog`-nál.
+
++ Request (application/json)
+
+        {
+            "name"  : "string",
+            "note"      : "string",
+            "size"  : "string", //"small","medium","large"
+            "birth_year"   : "int",
+            "related_organisation"   : {/*ogranisaton object*/},
+            "sex"       : "string", //"male", "female"
+            "color"     : "string", //szabadszavas
+            "breed"     : "string", //szabadszavas
+            "location"  : {
+                "formatted_address": "", //string google mapsből származó `formatted_address`
+                "lat": 0.0, //float google mapsből származó lat
+                "lng": 0.0, //float google mapsből származó lng
+                /**
+                 * string felhasználó által begépelt/módosított cím
+                 * (opcionális, default: "formatted_address"-ből átmásolt érték)
+                 *
+                 * az esetek döntő többségében ez ugyanaz lesz, mint a `formatted_address`
+                 *
+                 * ha van input mező, ahova a felhasználó megadhat címet, akkor ez annak az input mezőnek az értéke (míg a `formatted_address` a google maps reverse geocodingja által visszaadott string, amit a felhasználó nem módosíthat)
+                 */
+                "display_address": "", //
+            },
+            "is_lost": boolean,
+        }
+
++ Response 200 (application/json)
+
+
+### Delete a dog [DELETE /dog/:id]
+
+Saját kutyám töröltnek jelölése.
+
+Csak bejelentkezve, és csak a sajátunkat lehet szerkeszteni.
+
++ Response 200 (application/json)
+
+        {
+        
+        }
+            
+## Dog Profile Picture [/dog/:id/profile_picture]
+### Get a Dog's Profile Picture [GET /dog/:id/profile_picture/current{?width,height}]
+
+( ugyanaz, mint a felhasználó profilkezelése )
+
++ Parameters
+        
+    + width (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a szélességbe
+    + height (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a magasságba
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: image/jpg
+
++ Response 301
+
+    + Headers
+
+                Location: http://path.to/image/file
+        
++ Response 302
+
+    + Headers
+
+                Location: http://path.to/image/file
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: application/json
+            
++ Response 200
+
+        + Body (application/json)
+        
+                {
+                    "id": "", //int/string unique id
+                    "thumbnail_uri": "", //string abszolút url a kép kért méretű változatához
+                    "thumbnail_size": { //object a thumbnail_uri-ban visszaadott kép valódi méretei
+                        "width": 0,
+                        "height": 0
+                    },
+                    "is_placeholder": false, //boolean a kép egy placeholder-e
+                }
+
+### Create a Profile Picture [POST]
+
+( ugyanaz, mint a felhasználó profilkezelése )
+
++ Request (image/jpg)
+
++ Response 200
+
+        (contents of the image)
+
++ Request (image/png)
+
++ Response 200
+
+        a képfájl, binárisan
+        
++ Response 412
+
++ Response 415
+
+
+
+## Dog Gallery Pictures [/dog/:id/gallery_picture]
+
+### Get a list of Gallery Pictures [GET /dog/:id/gallery_picture{?width,height}]
+
+Lista a kutyához feltöltött galéria képekről. 
+
+Publikusan elérhető.
+
++ Parameters
+        
+    + width (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a szélességbe
+    + height (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a magasságba
+    
++ Response 200
+
+        + Body (application/json)
+            
+                [
+                    {
+                        "id": "", //int/string unique id
+                        "thumbnail_uri": "", //string abszolút url a kép kért méretű változatához
+                        "thumbnail_size": { //object a thumbnail_uri-ban visszaadott kép valódi méretei
+                            "width": 0,
+                            "height": 0
+                        },
+                        "is_placeholder": false, //boolean a kép egy placeholder-e
+                    }
+                ]
+
+### Get a single Gallery Picture [GET /dog/:id/gallery_picture/:galleryPictureId{?width,height}]
+
+( ugyanaz, mint a felhasználó profilkezelése )
+
++ Parameters
+        
+    + width (optional, number, `300`) - kép arányos lekicsinyítése, hogy beleférjen ebbe a szélességbe
+    + height (optional, number, `300`) - kép arányos lekicsinyítése, hogy beleférjen ebbe a magasságba
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: image/jpg
+
++ Response 301
+
+    + Headers
+
+                Location: http://path.to/image/file
+        
++ Response 302
+
+    + Headers
+
+                Location: http://path.to/image/file
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: application/json
+            
++ Response 200
+
+        + Body (application/json)
+        
+                {
+                    "id": "", //int/string unique id
+                    "thumbnail_uri": "", //string abszolút url a kép kért méretű változatához
+                    "thumbnail_size": { //object a thumbnail_uri-ban visszaadott kép valódi méretei
+                        "width": 0,
+                        "height": 0
+                    },
+                    "is_placeholder": false, //boolean a kép egy placeholder-e
+                }
+
+### Create a Gallery Picture [POST]
+
+( ugyanaz, mint a felhasználó profilkezelése )
+
++ Request (image/jpg)
+
++ Response 200
+
+        (contents of the image)
+
++ Request (image/png)
+
++ Response 200
+
+        a képfájl, binárisan
+        
++ Response 412
+
++ Response 415
+    
+## Organisation [/organisation{?query,size_min,size_max,age_min,age_max,sex,color,breed,is_activated}]
+### List All Organisation [GET]
+
+A rendszerben levő szervezetek listája.
+
+Publikusan elérhető.
+
++ Parameters
+    + query  (string, `dog`) kereső szó
+    + size_min (number, `1`)
+    + size_max (number, `2`)
+    + age_min  (number, `1`)
+    + age_max  (number, `2`)
+    + sex (boolean, `false`)
+    + color (string, `blue merle`)
+    + breed (string, `Welsh Corgi Cardigan`)
+    + is_activated (boolean, `true`)
+
++ Response 200 (application/json)
+
+        + Attribute (Pager_Organisation)
+
+### Get a single Organisation [GET /organisation/:id]
+
+Egy szervezet lekérdezése a rendszerből.
+
+Publikusan elérhető.
+
++ Response 200
+
+    + Attribute (Organisation)
+
+### Create a New Organisation [POST]
+
+Egy új szervezet ajánlása/létrehozása.
+
+Publikusan elérhető.
+
+- type: kötelező, egy a következő közül: "charity_organisation", "dog_shelter", "local_authority"
+- email: (ez egy contact email címet jelent) kötelező, nem muszáj egyedinek lennie
+- display_name: kötelező, min 3 karakter, max 255 karakter
+- phone: opcionális, min 3 karakter, max 255 karakter
+- post_code: opcionális, min 3 karakter, max 5 karakter
+- location: kötelező
+
++ Request (application/json)
+
+        {
+            "type"          : "string", //"charity_organisation", "dog_shelter", "local_authority" kötelező
+            "email"         : "string", //contact email kötelező
+            "display_name"  : "string", kötelező
+            "phone"         : "string",
+            "post_code"     : "string", 
+            "location"  : { kötelező
+                "formatted_address": "", //string google mapsből származó `formatted_address`
+                "lat": 0.0, //float google mapsből származó lat
+                "lng": 0.0, //float google mapsből származó lng
+                /**
+                 * string felhasználó által begépelt/módosított cím
+                 * (opcionális, default: "formatted_address"-ből átmásolt érték)
+                 *
+                 * az esetek döntő többségében ez ugyanaz lesz, mint a `formatted_address`
+                 *
+                 * ha van input mező, ahova a felhasználó megadhat címet, akkor ez annak az input mezőnek az értéke (míg a `formatted_address` a google maps reverse geocodingja által visszaadott string, amit a felhasználó nem módosíthat)
+                 */
+                "display_address": "", //
+            },
+        }
+
++ Response 201 (application/json)
+
+## Vet [/vet{?query,location_near,location_max_distance,price_category,open_nonstop,has_daycare,has_parking_lot,has_microchipping_service}]
+### List All Vet [GET]
+
+A rendszerben levő állatkórházak és állatorvosi rendelők listája.
+
+Publikusan elérhető.
+
++ Parameters
+    + query (optional, string,`Dr. Vet`)
+    + location_near (optional, string, `7.5070283,18.9540527`)
+    + location_max_distance (optional, number, `50`)
+    + price_category (array, `price_category[]=cheap,price_category[]=middle,price_category[]=expensive,price_category[]=exclusive`, optional,'cheap')
+    + open_nonstop (optional, boolean, `true`)
+    + has_daycare (optional, boolean, `true`)
+    + has_parking_lot (optional, boolean, `true`)
+    + has_microchipping_service (optional, boolean, `true`)
+
++ Response 200 (application/json)
+
+    + Attribute (Vets_list)
+
+### Get a single Vet [GET /vet/{id}]
+
+Egy állatorvosi rendelő lekérdezése.
+
+Publikusan elérhető.
+
++ Response 200 (application/json)
+
+    + Attribute (Vet)
+
+### Create a New Vet [POST]
+
+Egy új állatorvosi rendelő ajánlása/létrehozása.
+
+Publikusan elérhető.
+
+- display_name: kötelező, min 3 karakter, max 255 karakter
+- price_category: optional, egy a következők közül: "cheap", "expensive"
+- open_nonstop: opcionális, default: false
+- has_daycare: opcionális, default: false
+- email: kötelező, string
+- has_parking_lot: opcionális, default: false
+- has_microchipping_service: opcionális, default: false
+- contact_information: opcionális, max 255 karakter
+- location: kötelező
+
++ Request (application/json)
+
+        {
+            "display_name"          : "string", kötelező
+            "price_category"         : "string", //"cheap", "expensive" kötelező
+            "open_nonstop"       : "boolean", opcionális
+            "has_daycare"      : "boolean", opcionális
+            "has_parking_lot"       : "boolean", opcionális
+            "has_microchipping_service" : "boolean", opcionális
+            "contact_information"       : "string", opcionális
+            "location"  : { kötelező
+                            "formatted_address": "", //string google mapsből származó `formatted_address`
+                            "lat": 0.0, //float google mapsből származó lat
+                            "lng": 0.0, //float google mapsből származó lng
+                            /**
+                             * string felhasználó által begépelt/módosított cím
+                             * (opcionális, default: "formatted_address"-ből átmásolt érték)
+                             *
+                             * az esetek döntő többségében ez ugyanaz lesz, mint a `formatted_address`
+                             *
+                             * ha van input mező, ahova a felhasználó megadhat címet, akkor ez annak az input mezőnek az értéke (míg a `formatted_address` a google maps reverse geocodingja által visszaadott string, amit a felhasználó nem módosíthat)
+                             */
+                            "display_address": "", //
+                        },
+        }
+
++ Response 201 (application/json)
+
+    + Body
+
+            {
+               
+            }
+            
+## Vet Profile Picture [/vet/:id/profile_picture]
+### Get a Vet's Profile Picture [GET /vet/:id/profile_picture/current{?width,height}]
+
+( ugyanaz, mint a felhasználó profilkezelése )
+
++ Parameters
+        
+    + width (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a szélességbe
+    + height (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a magasságba
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: image/jpg
+
++ Response 301
+
+    + Headers
+
+                Location: http://path.to/image/file
+        
++ Response 302
+
+    + Headers
+
+                Location: http://path.to/image/file
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: application/json
+            
++ Response 200
+
+        + Body (application/json)
+        
+                {
+                    "id": "", //int/string unique id
+                    "thumbnail_uri": "", //string abszolút url a kép kért méretű változatához
+                    "thumbnail_size": { //object a thumbnail_uri-ban visszaadott kép valódi méretei
+                        "width": 0,
+                        "height": 0
+                    },
+                    "is_placeholder": false, //boolean a kép egy placeholder-e
+                }
+
+            
+## Vet Gallery Pictures [/vet/:id/gallery_picture]
+
+### Get a list of Gallery Pictures [GET /vet/:id/gallery_picture{?width,height}]
+
++ Parameters
+        
+    + width (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a szélességbe
+    + height (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a magasságba
+    
++ Response 200
+
+        + Body (application/json)
+            
+                [
+                    {
+                        "id": "", //int/string unique id
+                        "thumbnail_uri": "", //string abszolút url a kép kért méretű változatához
+                        "thumbnail_size": { //object a thumbnail_uri-ban visszaadott kép valódi méretei
+                            "width": 0,
+                            "height": 0
+                        },
+                        "is_placeholder": false, //boolean a kép egy placeholder-e
+                    }
+                ]
+
+### Get a single Gallery Picture [GET /vet/:id/gallery_picture/:galleryPictureId{?width,height}]
+
++ Parameters
+        
+    + width (optional, number, `300`) - kép arányos lekicsinyítése, hogy beleférjen ebbe a szélességbe
+    + height (optional, number, `300`) - kép arányos lekicsinyítése, hogy beleférjen ebbe a magasságba
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: image/jpg
+
++ Response 301
+
+    + Headers
+
+                Location: http://path.to/image/file
+        
++ Response 302
+
+    + Headers
+
+                Location: http://path.to/image/file
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: application/json
+            
++ Response 200
+
+        + Body (application/json)
+        
+                {
+                    "id": "", //int/string unique id
+                    "thumbnail_uri": "", //string abszolút url a kép kért méretű változatához
+                    "thumbnail_size": { //object a thumbnail_uri-ban visszaadott kép valódi méretei
+                        "width": 0,
+                        "height": 0
+                    },
+                    "is_placeholder": false, //boolean a kép egy placeholder-e
+                }
+
+### Create a Gallery Picture [POST]
+
++ Request (image/jpg)
+
++ Response 200
+
+        (contents of the image)
+
++ Request (image/png)
+
++ Response 200
+
+        a képfájl, binárisan
+        
++ Response 412
+
++ Response 415
+        
+        
+
+## Vet review [/vet/:id/review]
+### List All Vet review [GET]
+
+Egy állatorvosi rendelőhöz írt értékelések.
+
+Publikusan elérhető.
+
++ Response 200 (application/json)
+
+    + Attribute(Pager_Review)
+        
+### Get a single review [GET /vet/:id/review/:id]
+
+Egy állatorvosi rendelőhöz írt értékelés lekérdezése.
+
+Publikusan elérhető.
+
++ Response 200 (application/json)
+
+    + Attribute(Review)
+        
+### Create a new review [POST]
+
+Egy új értékelés létrehozása.
+
+Csak bejelentkezve használható.
+
+- stars: kötelező, a következők egyike: 1,2,3,4,5
+- text: opcionális értékelés szöveg, max 255 karakter
+
++ Request (application/json)
+
+        {
+            "stars"    : 3,
+            "text"   : "string"
+        }
+
++ Response 200 (application/json)
+
+        {
+            
+        }
+
+        
+        
+## Reports created by the users [/report]
+### List All reports [GET]
+
+A rendszerben levő reportok listája.
+
+Nem kell implementálni most.
+
++ Response 200 (application/json)
+
+        [
+            {
+                "id"        : 0,
+                "user"    : {/* User object */},
+                "text"   : "string",
+                "reported_object_type": "string", //enum
+                "reported_object": {/* any object from the system */},
+            }
+        ]
+
+### Create a new report [POST]
+
+Új report létrehozása.
+
+Bejelentkezés után mindenki használhatja.
+
+- text: opcionális, max 512 karakter, szabadszavas
+- reported_object_type: kötelező, a következők egyike: "dog","restaurant","vet","goomingsalon","dogpark"
+- reported_object: kötelező
+
+A `reported_object`-ben levő `id` mezőt kell a `reported_object_type` alapján a megfelelő collection-ből (db táblából) kikeresni, és azt kapcsolni a reporthoz.
+
++ Response 200 (application/json)
+
+        [
+            {
+                "text"   : "string",
+                "reported_object_type": "string",
+                "reported_object": {/* any object from the system */},
+            }
+        ]
+        
+## Restaurant [/restaurant{?query,location_near,location_max_distance,price,dog_inside,dog_outside,outdoor_heating,water_bowl,big_dogs,parking,dog_food,page}]
+### List All Restaurant [GET]
+
+A rendszerben levő kutyabarát éttermek listája.
+
+Publikusan elérhető.
+
++ Parameters
+    + query  (string, `vet`) kereső szó
+    + location_near (optional, string, `7.5070283,18.9540527`)
+    + location_max_distance (optional, number, `50`)
+    + price_category (array, `price_category[]=cheap,price_category[]=middle,price_category[]=expensive,price_category[]=exclusive`, optional)
+    + dog_inside (boolean, `true`)
+    + dog_outside (boolean, `false`)
+    + outdoor_heating (boolean, `true`)
+    + water_bowl (boolean, `false`)
+    + big_dogs (boolean, `true`)
+    + parking (boolean, `false`)
+    + dog_food (boolean, `true`)
+    + page (number, `0`)
+    
++ Response 200 (application/json)
+
+       + Response 200 (application/json)
+
+    + Attribute (Restaurants_list)
+
+     
+
+
++ Response 201 (application/json)
+
+    + Body
+
+            {
+               
+            }
+            
+### Get a single RESTAURANT [GET /restaurant/{id}]
+
+Egy bizonyos étterem lekérdezése
+
+Publikusan elérhető.
+
++ Response 200 (application/json)
+
+
+        {
+            "id" :0,
+            "display_name"          : "string",
+            "average_stars"         : "float",
+            "price_category"         : "string", 
+            "can_bring_dog_inside"    :false,
+            "can_leave_dog_outside"   :false,
+            "has_outdoor_heating":false,
+            "has_water_bowl"    :false,
+            "can_serve_big_dogs"      :true,
+            "has_parking_lot"       :true,
+            "can_serve_dog_food"      :true,
+            "contact_information"       : "string",
+            "related_user"   : null
+               
+            
+        }
+            
+### Create a New Restaurant [POST]
+
+Egy új étterem ajánlása/létrehozása.
+
+- display_name: kötelező, min 3 karakter, max 255 karakter
+- price_category: opcionális, ezek egyike: "cheap", "expensive"
+- email: kötelező, string
+- can_bring_dog_inside: opcionális, default: false
+- can_leave_dog_outside: opcionális, default: false
+- has_outdoor_heating: opcionális, default: false
+- has_water_bowl: opcionális, default: false
+- can_serve_big_dogs: opcionális, default: false
+- has_parking_lot: opcionális, default: false
+- can_serve_dog_food: opcionális, default: false
+- contact_information: opcionális, max 255 karakter
+ "location"  : { kötelező
+                            "formatted_address": "", //string google mapsből származó `formatted_address`
+                            "lat": 0.0, //float google mapsből származó lat
+                            "lng": 0.0, //float google mapsből származó lng
+                            /**
+                             * string felhasználó által begépelt/módosított cím
+                             * (opcionális, default: "formatted_address"-ből átmásolt érték)
+                             *
+                             * az esetek döntő többségében ez ugyanaz lesz, mint a `formatted_address`
+                             *
+                             * ha van input mező, ahova a felhasználó megadhat címet, akkor ez annak az input mezőnek az értéke (míg a `formatted_address` a google maps reverse geocodingja által visszaadott string, amit a felhasználó nem módosíthat)
+                             */
+                            "display_address": "", //
+                        },
+
++ Request (application/json)
+
+        {
+                "display_name"          : "string", kötelező
+                "price_category"         : "string", //"cheap", "expensive" kötelező
+                "can_bring_dog_inside"    :"boolean", opcionális
+                "can_leave_dog_outside"   :"boolean", opcionális
+                "has_outdoor_heating":"boolean",opcionális
+                "has_water_bowl"    :"boolean",opcionális
+                "can_serve_big_dogs"      :"boolean",opcionális
+                "has_parking_lot"       :"boolean",opcionális
+                "can_serve_dog_food"      :"boolean",opcionális
+                "contact_information"       : "string",opcionális
+                
+        }
+
++ Response 201 (application/json)
+
+    + Body
+
+            {
+                
+            }
+            
+## Restaurant Profile Picture [/restaurant/:id/profile_picture]
+### Get a Restaurant's Profile Picture [GET /restaurant/:id/profile_picture/current{?width,height}]
+
+( ugyanaz, mint a felhasználó profilkezelése )
+
++ Parameters
+        
+    + width (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a szélességbe
+    + height (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a magasságba
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: image/jpg
+
++ Response 301
+
+    + Headers
+
+                Location: http://path.to/image/file
+        
++ Response 302
+
+    + Headers
+
+                Location: http://path.to/image/file
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: application/json
+            
++ Response 200
+
+        + Body (application/json)
+        
+                {
+                    "id": "", //int/string unique id
+                    "thumbnail_uri": "", //string abszolút url a kép kért méretű változatához
+                    "thumbnail_size": { //object a thumbnail_uri-ban visszaadott kép valódi méretei
+                        "width": 0,
+                        "height": 0
+                    },
+                    "is_placeholder": false, //boolean a kép egy placeholder-e
+                }
+
+            
+## Restaurant Gallery Pictures [/restaurant/:id/gallery_picture]
+
+### Get a list of Gallery Pictures [GET /restaurant/:id/gallery_picture{?width,height}]
+
++ Parameters
+        
+    + width (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a szélességbe
+    + height (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a magasságba
+    
++ Response 200
+
+        + Body (application/json)
+            
+                [
+                    {
+                        "id": "", //int/string unique id
+                        "thumbnail_uri": "", //string abszolút url a kép kért méretű változatához
+                        "thumbnail_size": { //object a thumbnail_uri-ban visszaadott kép valódi méretei
+                            "width": 0,
+                            "height": 0
+                        },
+                        "is_placeholder": false, //boolean a kép egy placeholder-e
+                    }
+                ]
+
+### Get a single Gallery Picture [GET /restaurant/:id/gallery_picture/:galleryPictureId{?width,height}]
+
++ Parameters
+        
+    + width (optional, number, `300`) - kép arányos lekicsinyítése, hogy beleférjen ebbe a szélességbe
+    + height (optional, number, `300`) - kép arányos lekicsinyítése, hogy beleférjen ebbe a magasságba
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: image/jpg
+
++ Response 301
+
+    + Headers
+
+                Location: http://path.to/image/file
+        
++ Response 302
+
+    + Headers
+
+                Location: http://path.to/image/file
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: application/json
+            
++ Response 200
+
+        + Body (application/json)
+        
+                {
+                    "id": "", //int/string unique id
+                    "thumbnail_uri": "", //string abszolút url a kép kért méretű változatához
+                    "thumbnail_size": { //object a thumbnail_uri-ban visszaadott kép valódi méretei
+                        "width": 0,
+                        "height": 0
+                    },
+                    "is_placeholder": false, //boolean a kép egy placeholder-e
+                }
+
+### Create a Gallery Picture [POST]
+
++ Request (image/jpg)
+
++ Response 200
+
+        (contents of the image)
+
++ Request (image/png)
+
++ Response 200
+
+        a képfájl, binárisan
+        
++ Response 412
+
++ Response 415
+
+## Restaurant review [/restaurant/:id/review]
+### List All Restaurant review [GET]
+
++ Response 200 (application/json)
+
+    + Attribute(Pager_Review)
+        
+### Create a new review [POST]
+
+Egy új értékelés létrehozása.
+
+Csak bejelentkezve használható.
+
+- stars: kötelező, a következők egyike: 1,2,3,4,5
+- text: opcionális értékelés szöveg, max 255 karakter
+
++ Request (application/json)
+
+        {
+            "stars"    : 3,
+            "text"   : "string"
+        }
+
++ Response 200 (application/json)
+
+        {
+            
+        }
+        
+### Get a single review [GET /restaurant/:id/review/:id]
+
++ Response 200 (application/json)
+
+    + Attribute(Review)
+
+        
+        
+        
+    
+## GroomingSalon [/grooming_salon{?query,location_near,location_max_distance,price_category,has_park_lot,has_shop}]
+### List All GroomingSalon [GET]
+
+A rendszerben levő összes kutyakozmetika listája.
+
+Publikusan elérhető.
+
++ Parameters
+    + query  (string, `vet`) kereső szó
+    + location_near (optional, string, `7.5070283,18.9540527`)
+    + location_max_distance (optional, number, `50`)
+    + price_category (array, `price_category[]=cheap,price_category[]=middle,price_category[]=expensive,price_category[]=exclusive`, optional)
+    + has_park_lot (boolean, `true`)
+    + has_shop (boolean, `false`)
+
++ Response 200 (application/json)
+
+    + Attribute (GroomingSalon_list)
+
+     
++ Response 201 (application/json)
+
+    + Body
+
+            {
+               
+            }
+### Get a single GroomingSalon [GET /grooming_salon/{id}]
+
+Egy kutyakozmetika lekérdezése.
+
+Publikusan elérhető.
+
++ Response 200 (application/json)
+
+
+    + Attribute(GroomingSalon)
+        
+            
+
+### Create a New GroomingSalon [POST]
+
+Új kutyakozmetika ajánlása/létrehozása
+
+- display_name: kötelező, min 3 karakter, max 255 karakter
+- introduction: opcionális, max 2000 karakter
+- price_category: opcionális, ezek egyike: "cheap", "expensive"
+- has_parking_lot: opcionális, default: false
+- email: kötelező
+- has_shop: opcionális, default: false
+- location: kötelező
+- contact_information: opcionális, max 255 karakter
+
+
++ Request (application/json)
+
+        {
+                "display_name"          : "string", kötelező
+                "introduction"      : "string",
+                "price_category"         : "enum", opcionális
+                "has_park_lot"       : "boolean",opcionális
+                "has_shop"          : "boolean",opcionális
+                "email"             : "string"
+                "location"  : { kötelező
+                            "formatted_address": "", //string google mapsből származó `formatted_address`
+                            "lat": 0.0, //float google mapsből származó lat
+                            "lng": 0.0, //float google mapsből származó lng
+                            /**
+                             * string felhasználó által begépelt/módosított cím
+                             * (opcionális, default: "formatted_address"-ből átmásolt érték)
+                             *
+                             * az esetek döntő többségében ez ugyanaz lesz, mint a `formatted_address`
+                             *
+                             * ha van input mező, ahova a felhasználó megadhat címet, akkor ez annak az input mezőnek az értéke (míg a `formatted_address` a google maps reverse geocodingja által visszaadott string, amit a felhasználó nem módosíthat)
+                             */
+                            "display_address": "", //
+                        },
+                "contact_information"      : "string", opcionális
+                
+        }
+        
+
++ Response 201 (application/json)
+
+    + Body
+
+            {
+                
+            }
+            
+## GroominSalon Profile Picture [/grooming_salon/:id/profile_picture]
+### Get a GroomingSalon's Profile Picture [GET /grooming_salon/:id/profile_picture/current{?width,height}]
+
+( ugyanaz, mint a felhasználó profilkezelése )
+
++ Parameters
+        
+    + width (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a szélességbe
+    + height (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a magasságba
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: image/jpg
+
++ Response 301
+
+    + Headers
+
+                Location: http://path.to/image/file
+        
++ Response 302
+
+    + Headers
+
+                Location: http://path.to/image/file
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: application/json
+            
++ Response 200
+
+        + Body (application/json)
+        
+                {
+                    "id": "", //int/string unique id
+                    "thumbnail_uri": "", //string abszolút url a kép kért méretű változatához
+                    "thumbnail_size": { //object a thumbnail_uri-ban visszaadott kép valódi méretei
+                        "width": 0,
+                        "height": 0
+                    },
+                    "is_placeholder": false, //boolean a kép egy placeholder-e
+                }
+
+            
+## GroomingSalon Gallery Pictures [/grooming_salon/:id/gallery_picture]
+
+### Get a list of Gallery Pictures [GET /grooming_salon/:id/gallery_picture{?width,height}]
+
++ Parameters
+        
+    + width (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a szélességbe
+    + height (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a magasságba
+    
++ Response 200
+
+        + Body (application/json)
+            
+                [
+                    {
+                        "id": "", //int/string unique id
+                        "thumbnail_uri": "", //string abszolút url a kép kért méretű változatához
+                        "thumbnail_size": { //object a thumbnail_uri-ban visszaadott kép valódi méretei
+                            "width": 0,
+                            "height": 0
+                        },
+                        "is_placeholder": false, //boolean a kép egy placeholder-e
+                    }
+                ]
+
+### Get a single Gallery Picture [GET /grooming_salon/:id/gallery_picture/:galleryPictureId{?width,height}]
+
++ Parameters
+        
+    + width (optional, number, `300`) - kép arányos lekicsinyítése, hogy beleférjen ebbe a szélességbe
+    + height (optional, number, `300`) - kép arányos lekicsinyítése, hogy beleférjen ebbe a magasságba
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: image/jpg
+
++ Response 301
+
+    + Headers
+
+                Location: http://path.to/image/file
+        
++ Response 302
+
+    + Headers
+
+                Location: http://path.to/image/file
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: application/json
+            
++ Response 200
+
+        + Body (application/json)
+        
+                {
+                    "id": "", //int/string unique id
+                    "thumbnail_uri": "", //string abszolút url a kép kért méretű változatához
+                    "thumbnail_size": { //object a thumbnail_uri-ban visszaadott kép valódi méretei
+                        "width": 0,
+                        "height": 0
+                    },
+                    "is_placeholder": false, //boolean a kép egy placeholder-e
+                }
+
+### Create a Gallery Picture [POST]
+Csak bejelentkezve
+
++ Request (image/jpg)
+
++ Response 200
+
+        (contents of the image)
+
++ Request (image/png)
+
++ Response 200
+
+        a képfájl, binárisan
+        
++ Response 412
+
++ Response 415
+        
+        
+
+## GroomingSalon review [/grooming_salon/:id/review]
+### List All GroomingSalon review [GET]
+
+A rendszerben levő összes értékelés.
+
+Publikusan elérhető.
+
++ Response 200 (application/json)
+
+    + Attribute(Pager_Review)
+        
+### Create a new review [POST]
+
+Egy új értékelés létrehozása.
+
+Csak bejelentkezve használható.
+
+- stars: kötelező, a következők egyike: 1,2,3,4,5
+- text: opcionális értékelés szöveg, max 255 karakter
+
++ Request (application/json)
+
+        {
+            "stars"    : 3,
+            "text"   : "string"
+        }
+
++ Response 200 (application/json)
+
+        {
+            
+        }
+        
+### Get a single review [GET /grooming_salon/:id/review/:id]
+
+Egy bizonyos értékelés lekérdezése.
+
+Publikusan elérhető.
+
++ Response 200 (application/json)
+
+    + Attribute(Review)
+
+        
+        
+        
+## DogPark [/dog_park{?query,location_near,location_max_distance,off_leash,water_taps,dog_waste_bin,page,has_park_lot}]
+### List All Park [GET]
+
+A rendszerben levő kutyás parkok listája.
+
+Publikusan elérhető.
+
++ Parameters
+    + query  (string, `vet`) kereső szó
+    + location_near (optional, string, `7.5070283,18.9540527`)
+    + location_max_distance (optional, number, `50`)
+    + off_leash (boolean, `true`)
+    + water_taps (boolean, `true`)
+    + dog_waste_bin (boolean, `true`)
+    + page (number, `0`)
+    + has_park_lot (boolean,`true`)
+    
++ Response 200 (application/json)
+
+    + Attribute (DogParks_list)
+            
++ Response 201 (application/json)
+
+    + Body
+
+            {
+               
+            }
+### Get a single DogPark [GET /dog_park/{id}]
+
+Egy bizonyos kutyás park lekérdezése.
+
+Publikusan elérhető.
+
++ Response 200 (application/json)
+
+
+    + Attribute (DogPark)
+        
+### Create a New Park [POST]
+
+Új kutyás park ajánlása/létrehozása.
+
+Publikusan elérhető.
+
+- name: kötelező, min 3 karakter, max 255 karakter
+- email: kötelező
+- text: opcionális, max 255 karakter
+- off_leash: opcionális, default: false
+- water_taps: opcionális, default: false
+- dog_waste_bin: opcionális, default: false
+- parking: opcionális, default: false
+- location: kötelező
+- contact: opcionális, max 255 karakter
+
++ Request (application/json)
+
+        {
+                "name"          : "string", kötelező
+                "email"         : "string", kötelező
+                "text"          : "string", opcionális
+                "off_leash"     : "boolean",opcionális
+                "water_taps"    : "boolean",opcionális
+                "dog_waste_bin" : "boolean",opcionális
+                "parking"       : "boolean",opcionális
+                "location"  : { kötelező
+                            "formatted_address": "", //string google mapsből származó `formatted_address`
+                            "lat": 0.0, //float google mapsből származó lat
+                            "lng": 0.0, //float google mapsből származó lng
+                            /**
+                             * string felhasználó által begépelt/módosított cím
+                             * (opcionális, default: "formatted_address"-ből átmásolt érték)
+                             *
+                             * az esetek döntő többségében ez ugyanaz lesz, mint a `formatted_address`
+                             *
+                             * ha van input mező, ahova a felhasználó megadhat címet, akkor ez annak az input mezőnek az értéke (míg a `formatted_address` a google maps reverse geocodingja által visszaadott string, amit a felhasználó nem módosíthat)
+                             */
+                            "display_address": "", //
+                        },
+                "contact"      : "string", opcionális
+                
+        }
+
++ Response 201 (application/json)
+
+    + Body
+
+            {
+                
+            }
+            
+## DogPark Profile Picture [/dog_park/:id/profile_picture]
+### Get a DogPark's Profile Picture [GET /dog_park/:id/profile_picture/current{?width,height}]
+
+( ugyanaz, mint a felhasználó profilkezelése )
+
++ Parameters
+        
+    + width (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a szélességbe
+    + height (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a magasságba
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: image/jpg
+
++ Response 301
+
+    + Headers
+
+                Location: http://path.to/image/file
+        
++ Response 302
+
+    + Headers
+
+                Location: http://path.to/image/file
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: application/json
+            
++ Response 200
+
+        + Body (application/json)
+        
+                {
+                    "id": "", //int/string unique id
+                    "thumbnail_uri": "", //string abszolút url a kép kért méretű változatához
+                    "thumbnail_size": { //object a thumbnail_uri-ban visszaadott kép valódi méretei
+                        "width": 0,
+                        "height": 0
+                    },
+                    "is_placeholder": false, //boolean a kép egy placeholder-e
+                }
+
+            
+## DogPark Gallery Pictures [/dog_park/:id/gallery_picture]
+
+### Get a list of Gallery Pictures [GET /dog_park/:id/gallery_picture{?width,height}]
+
++ Parameters
+        
+    + width (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a szélességbe
+    + height (number, `300`, optional) - kép arányos lekicsinyítése, hogy beleférjen ebbe a magasságba
+    
++ Response 200
+
+        + Body (application/json)
+            
+                [
+                    {
+                        "id": "", //int/string unique id
+                        "thumbnail_uri": "", //string abszolút url a kép kért méretű változatához
+                        "thumbnail_size": { //object a thumbnail_uri-ban visszaadott kép valódi méretei
+                            "width": 0,
+                            "height": 0
+                        },
+                        "is_placeholder": false, //boolean a kép egy placeholder-e
+                    }
+                ]
+
+### Get a single Gallery Picture [GET /dog_park/:id/gallery_picture/:galleryPictureId{?width,height}]
+
++ Parameters
+        
+    + width (optional, number, `300`) - kép arányos lekicsinyítése, hogy beleférjen ebbe a szélességbe
+    + height (optional, number, `300`) - kép arányos lekicsinyítése, hogy beleférjen ebbe a magasságba
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: image/jpg
+
++ Response 301
+
+    + Headers
+
+                Location: http://path.to/image/file
+        
++ Response 302
+
+    + Headers
+
+                Location: http://path.to/image/file
+
++ Request (application/json)
+
+    + Headers
+            
+            Accept: application/json
+            
++ Response 200
+
+        + Body (application/json)
+        
+                {
+                    "id": "", //int/string unique id
+                    "thumbnail_uri": "", //string abszolút url a kép kért méretű változatához
+                    "thumbnail_size": { //object a thumbnail_uri-ban visszaadott kép valódi méretei
+                        "width": 0,
+                        "height": 0
+                    },
+                    "is_placeholder": false, //boolean a kép egy placeholder-e
+                }
+
+### Create a Gallery Picture [POST]
+
++ Request (image/jpg)
+
++ Response 200
+
+        (contents of the image)
+
++ Request (image/png)
+
++ Response 200
+
+        a képfájl, binárisan
+        
++ Response 412
+
++ Response 415
+
+## DogPark review [/dog_park/:id/review]
+### List All DogPark review [GET]
+
+Egy kutyás parkhoz írt értékelések.
+
+Publikusan elérhető.
+
++ Response 200 (application/json)
+
+    + Attribute(Pager_Review)
+        
+### Get a single review [GET /dog_park/:id/review/:id]
+
+Egy kutyás parkhoz írt értékelés lekérdezése.
+
+Publikusan elérhető.
+
++ Response 200 (application/json)
+
+    + Attribute(Review)
+        
+### Create a new review [POST]
+
+Egy új értékelés létrehozása.
+
+Csak bejelentkezve használható.
+
+- stars: kötelező, a következők egyike: 1,2,3,4,5
+- text: opcionális értékelés szöveg, max 255 karakter
+
++ Request (application/json)
+
+        {
+            "stars"    : 3,
+            "text"   : "string"
+        }
+
++ Response 200 (application/json)
+
+        {
+            
+        }
+
+        
+        
+        
+
+## Dog Sightings [/dog/{id}/sighting]
+
+Egy elveszett kutyát hol láttak más felhasználók.
+
++ Parameters
+    + id (required, number, `1`) - Dog ID
+    
+### List all sightings of a dog [GET]
+
+Egy elveszett kutyák hol láttak más felhasználók.
+
+Publikusan elérhető.
+
++ Response 200 (application/json)
+
+        {
+            "total": 50,
+            "per_page": 15,
+            "current_page": 1,
+            "last_page": 4,
+            "next_page_url": "http://laravel.app?page=2",
+            "prev_page_url": null,
+            "from": 1,
+            "to": 15,
+            "data": [
+                {
+                    "id"            : 0,
+                    "text": "string",
+                    "location"  : {
+                        "formatted_address": "", //string google mapsből származó `formatted_address`
+                        "lat": 0.0, //float google mapsből származó lat
+                        "lng": 0.0, //float google mapsből származó lng
+                        /**
+                         * string felhasználó által begépelt/módosított cím
+                         * (opcionális, default: "formatted_address"-ből átmásolt érték)
+                         *
+                         * az esetek döntő többségében ez ugyanaz lesz, mint a `formatted_address`
+                         *
+                         * ha van input mező, ahova a felhasználó megadhat címet, akkor ez annak az input mezőnek az értéke (míg a `formatted_address` a google maps reverse geocodingja által visszaadott string, amit a felhasználó nem módosíthat)
+                         */
+                        "display_address": "", //
+                    },
+                    "related_user"   : {
+                        /* User object */
+                    },
+                }
+            ]
+        }
+
+### Create a new dog sighting [POST]
+
+"Én is láttam egy ezt a kutyát, ami benne van a barkler elveszett kutyáinak listájában"
+
+Csak bejelentkezés után érhető el.
+
+- text: opcionális, max 2000 karakter
+- location: kötelező
+
++ Request (application/json)
+
+        {
+            "text"   : "string",
+            "location"  : {
+                "formatted_address": "", //string google mapsből származó `formatted_address`
+                "lat": 0.0, //float google mapsből származó lat
+                "lng": 0.0, //float google mapsből származó lng
+                /**
+                 * string felhasználó által begépelt/módosított cím
+                 * (opcionális, default: "formatted_address"-ből átmásolt érték)
+                 *
+                 * az esetek döntő többségében ez ugyanaz lesz, mint a `formatted_address`
+                 *
+                 * ha van input mező, ahova a felhasználó megadhat címet, akkor ez annak az input mezőnek az értéke (míg a `formatted_address` a google maps reverse geocodingja által visszaadott string, amit a felhasználó nem módosíthat)
+                 */
+                "display_address": "", //
+            },
+        }
+
++ Response 200 (application/json)
+
+        {
+            
+        }
+        
++ Response 422 (application/json)
+
+        {
+        
+        }
+
+# Data Structures
+
+## User (object)
+
++ id: `0` (number)
++ username: `k.belane12` (string)
++ email: `foo@example.com` (string)
++ phone_number: `+12345789` (string)
++ address: `1036 Budapest, Perc utca 6.` (string)
++ created_at: `0000-00-00 00:00:00` (string)
++ updated_at: `0000-00-00 00:00:00` (string)
++ deleted_at: `0000-00-00 00:00:00` (string)
+
+## `Pager_User` (object)
+
++ total: 35 (number)
++ per_page: 15 (number)
++ current_page: 1 (number)
++ last_page: 3 (number)
++ from: 1 (number)
++ to: 15 (number)
++ data: User, User (array[User])
+
+## `Location` (object)
+
++ formatted_address": `1036 Budapest, Perc utca 6.` (string)
++ lat": 0.0 (number)
++ lng": 0.0 (number)
++ display_address: `prec ucca 6` (string) 
+
+## `Organisation` (object)
+
++ id: 0 (number)
++ type: `charity_organisation` (string)
++ email: `foo@example.com` (string)
++ display_name: `My Organisation` (string)
++ phone: `+123456789` (string)
++ post_code: `1234` (string)
++ location (Location)
++ is_activated: `false` (boolean)
++ deleted_at: "0000-00-00 00:00:00" (string)
+
+## `Pager_Organisation` (object)
+
++ total: 35 (number)
++ per_page: 15 (number)
++ current_page: 1 (number)
++ last_page: 3 (number)
++ from: 1 (number)
++ to: 15 (number)
++ data: Organisation,Organisation,Organisation (array[Organisation])
+
+## Dog (object)
+
++ id: 0 (number)
++ name  : `Dog` (string)
++ note  : `Little dog` (string)
++ size  : `small` (string)
++ birth_year: `2015` (number)
++ age   : 0 (number)
++ related_user (User)
++ related_organisation (Organisation),
++ sex       : `yes` (string) 
++ color     : `black` (string) 
++ breed     : `Welsh Corgi Cardigan` (string)
++ location (Location)
++ is_lost : false (boolean) 
++ is_found : false (boolean)
++ deleted_at: "0000-00-00 00:00:00" (string)
+
+## `Dogs_list` (object)
+
++ total: 35 (number)
++ per_page: 15 (number)
++ current_page: 1 (number)
++ last_page: 3 (number)
++ from: 1 (number)
++ to: 15 (number)
++ data: Dog,Dog,Dog,Dog,Dog,Dog,Dog, Dog (array[Dog])
+
+## Vet (object)
+
++ id                    : 0 (number)
++ average_stars         : 0.0 (number)
++ phone_number          : `123456` (string)
++ display_name          : `My vet` (string)
++ price_category        : `cheap` (string) 
++ open_nonstop          : `true` (boolean)
++ has_daycare           : `false` (boolean)
++ has_parking_lot       : `true` (boolean)
++ location (Location)
++ has_microchipping_service : false (boolean)
++ contact_information       : `asd street` (string)
++ related_user    (User)
++ deleted_at: "0000-00-00 00:00:00" (string)
+
+## `Vets_list` (object)
+
++ total: 35 (number)
++ per_page: 15 (number)
++ current_page: 1 (number)
++ last_page: 3 (number)
++ from: 1 (number)
++ to: 15 (number)
++ data: Vet, Vet (array[Vet])
+
+## Restaurant (object)
+
++ id: 0 (number)
++ display_name          : `Restaurant` (string)
++ average_stars         : 0 (number)
++ price_category         : `cheap` (string 
++ can_bring_dog_inside    :`false`(boolean)
++ can_leave_dog_outside   :`false` (boolean)
++ has_outdoor_heating:`false` (boolean)
++ has_water_bowl    :`false`(boolean)
++ can_serve_big_dogs      :`false` (boolean)
++ has_parking_lot       :`false` (boolean)
++ can_serve_dog_food      :`false` (boolean)
++ contact_information       : `www.almafa.hu` (string)
++ related_user (User),
++ deleted_at: "0000-00-00 00:00:00" (string)
+
+## `Restaurants_list` (object)
+
++ total: 35 (number)
++ per_page: 15 (number)
++ current_page: 1 (number)
++ last_page: 3 (number)
++ from: 1 (number)
++ to: 15 (number)
++ data: Restaurant, Restaurant (array[Restaurant])
+
+## GroomingSalon (object)
+
++ id : 0 (number)
++ display_name          : `groomingsalon` (string)
++ average_stars         : 0.0 (number)
++ introduction      :`grooming salon for dogs` (string)
++ price_category         : `cheap`(string)
++ has_park_lot       : `false `(boolean)
++ has_shop         : `true` (boolean)
++ location (Location)
++ contact       : `0000-00-00 00:00:00`(string)
++ created_at    : `0000-00-00 00:00:00`(string)
++ updated_at    :`0000-00-00 00:00:00`(string)
++ deleted_at: `0000-00-00 00:00:00` (string)
+
+## `GroomingSalon_list` (object)
+
++ total: 35 (number)
++ per_page: 15 (number)
++ current_page: 1 (number)
++ last_page: 3 (number)
++ from: 1 (number)
++ to: 15 (number)
++ data: GroomingSalon, GroomingSalon (array[GroomingSalon])
+
+## DogPark (object)
+
++ id            : 0(number)
++ name          : `DogParks` (string)
++ email         : `asd` (string)
++ stars         : 0 (number)
++ text          : `asd` (string)
++ off_leash     : false (boolean)
++ water_taps    : false (boolean)
++ dog_waste_bin : false (boolean)
++ parking       : false (boolean)
++ location (Location)
++ contact      : `asd `(string)
++ created_at: `0000-00-00 00:00:00` (string)
++ deleted_at: `0000-00-00 00:00:00` (string)
+
+## `DogParks_list` (object)
+
++ total: 35 (number)
++ per_page: 15 (number)
++ current_page: 1 (number)
++ last_page: 3 (number)
++ from: 1 (number)
++ to: 15 (number)
++ data: DogPark, DogPark (array[DogPark])
+            
+## `Review` (object)
+        
++ id: 0 (number)
++ stars: 5 (number)
++ user (User)
++ text: "I really really like it." (string)
++ created_at: `0000-00-00 00:00:00` (string)
++ updated_at: `0000-00-00 00:00:00` (string)
++ deleted_at: `0000-00-00 00:00:00` (string)
+
+## `Pager_Review` (object)
+
++ total: 35 (number)
++ per_page: 15 (number)
++ current_page: 1 (number)
++ last_page: 3 (number)
++ from: 1 (number)
++ to: 15 (number)
++ data: Review, Review, Review (array[Review])
