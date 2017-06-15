@@ -71,9 +71,9 @@ Authorize a user based on a facebook account. If the corresponding account does 
     + Body 
             {
                
-                "token": "",
-                "role": "",
-                "redirect_uri": "", 
+                "access_token": "",
+                "country": "",
+                "provider": "", 
             }
             
 + Response 200 (application/json)
@@ -151,6 +151,7 @@ Csak bejelentkezve, és csak a saját adatlapunkat lehet lekérdezni.
 - username: kötelező, csak kisbetű-nagybetű-szám-pont, min 3 karakter, max 255 karakter, egyedi a rendszerben
 - email: kötelező, egyedi
 - password: kötelező, min. 6 karakter
+- country: az eszköz nyelve
 - phone_number:  min 3 karakter, max 255 karakter
 - address:  min 3 karakter, max 255 karakter, nem kell validálni a cím helyességét semmilyen módon mert szabadszavas
 
@@ -160,6 +161,7 @@ Csak bejelentkezve, és csak a saját adatlapunkat lehet lekérdezni.
             "username"      : "string",
             "email"         : "string",
             "password"      : "string",
+            "country"       : "string"
             "phone_number"  : "string",
             "address"       : "string",
         }
@@ -264,7 +266,7 @@ Csak bejelentkezve, és csak a sajátunkat lehet szerkeszteni.
 
 + Response 415
 
-## Dogs [/dog{?query,size,age_min,age_max,related_organisation_id,related_organisation_type,related_organisation_type,sex,has_related_organisation,color,breed,is_lost,has_related_organisation,is_found,page}]
+## Dogs [/dog{?query,size,age_min,age_max,related_organisation_id,related_organisation_type,related_organisation_type,sex,has_related_organisation,color,breed,is_lost,has_related_organisation,is_found,bounding_box,page}]
 
 ### List all dogs [GET]
 
@@ -285,6 +287,7 @@ Bejelentkezés nélkül is elérhető.
     + breed (string, `Border Collie`, optional)
     + is_lost (optional, boolean, `true`)
     + is_found (optional, boolean, `true`)
+    + bounding_box (optional, double)
     + page (optional,number, `1`)
     
 
@@ -300,28 +303,13 @@ Bejelentkezés nélkül is elérhető.
 
     + Attribute (Dog)
         
-## A User's dogs [/user/{userId}/dog{?query,size,age_min,age_max,related_organisation_id,related_organisation_type,related_organisation_type,sex,has_related_organisation,color,breed,is_lost,has_related_organisation,is_found,page}]
+## A User's dogs [/user/{userId}/dog]
 ### List a User's dogs [GET]
 
 Egy bizonyos felhasználó kutyáinak lekérdezése.
 
 Csak bejelentkezve, és csak a sajátunkat lehet lekérdezni.
 
-+ Parameters
-    + query  (string, `dog`, optional) keresési kifejezés
-    + size (array, `size[]=small,size[]=medium`, optional)
-    + age_min  (number, `1`)
-    + age_max  (number, `2`)
-    + `related_organisation_id` (optional, number)
-    + `related_organisation_type` (optional, number)
-    + `has_related_organisation` (optional, boolean)
-    + sex (string, `male`, optional)
-    + color (string, `black`, optional)
-    + breed (string, `Border Collie`, optional)
-    + is_lost (optional, boolean, `true`)
-    + is_found (optional, boolean, `true`)
-    + page (optional,number, `0`)
-    
 
 + Response 200 (application/json)
 
@@ -349,8 +337,8 @@ A `related_user`-t automatikusan beállítja az aktuálisan bejelentkezett felha
 - name: kötelező, max 64 karakter, szabadszavas
 - note: opcionális, max 2000 karakter, szabadszavas
 - size: kötelező, egy a következők közül: "small","medium","large"
-- color: kötelező, max 64 karakter, szabadszavas
-- breed: kötelező, max 64 karakter, szabadszavas
+- color: optional, max 64 karakter, szabadszavas
+- breed: optional, max 64 karakter, szabadszavas
 - location: kötelező
 - is_lost: opcionális, default: false,
 
@@ -360,7 +348,8 @@ A `related_user`-t automatikusan beállítja az aktuálisan bejelentkezett felha
             "name"  : "string",
             "note"      : "string",
             "size"  : "string", //"small","medium","large"
-            "birth_year"   : "int",
+            "age_min"   : "int",
+            "age_max"   : "int",
             "sex"       : "string", //"male", "female"
             "color"     : "string", //szabadszavas
             "breed"     : "string", //szabadszavas
@@ -378,8 +367,7 @@ A `related_user`-t automatikusan beállítja az aktuálisan bejelentkezett felha
                  */
                 "display_address": "", //
             },
-            "is_lost": boolean,
-            "deleted_at":"0000-00-00 00:00:00"
+            "is_lost": boolean
         }
 
 + Response 201 (application/json)
@@ -418,7 +406,6 @@ A szabályok ugyanazok, mint a `POST /user/{userId}/dog`-nál.
                 "display_address": "", //
             },
             "is_lost": boolean,
-            "deleted_at":"0000-00-00 00:00:00"
         }
 
 + Response 200 (application/json)
@@ -689,8 +676,10 @@ Publikusan elérhető.
 + Response 412
 
 + Response 415
+
+
     
-## Organisation [/organisation{?query,size_min,size_max,age_min,age_max,sex,color,breed,is_activated}]
+## Organisation [/organisation{?query}]
 ### List All Organisation [GET]
 
 A rendszerben levő szervezetek listája.
@@ -699,14 +688,7 @@ Publikusan elérhető.
 
 + Parameters
     + query  (string, `dog`) kereső szó
-    + size_min (number, `1`)
-    + size_max (number, `2`)
-    + age_min  (number, `1`)
-    + age_max  (number, `2`)
-    + sex (boolean, `false`)
-    + color (string, `blue merle`)
-    + breed (string, `Welsh Corgi Cardigan`)
-    + is_activated (boolean, `true`)
+    
 
 + Response 200 (application/json)
 
@@ -731,7 +713,7 @@ Publikusan elérhető.
 - type: kötelező, egy a következő közül: "charity_organisation", "dog_shelter", "local_authority"
 - email: (ez egy contact email címet jelent) kötelező, nem muszáj egyedinek lennie
 - display_name: kötelező, min 3 karakter, max 255 karakter
-- phone: opcionális, min 3 karakter, max 255 karakter
+- phone_number: opcionális, min 3 karakter, max 255 karakter
 - post_code: opcionális, min 3 karakter, max 5 karakter
 - location: kötelező
 
@@ -739,9 +721,9 @@ Publikusan elérhető.
 
         {
             "type"          : "string", //"charity_organisation", "dog_shelter", "local_authority" kötelező
-            "email"         : "string", //contact email kötelező
+            "email"         : "string", //contact email 
             "display_name"  : "string", kötelező
-            "phone"         : "string",
+            "phone_number"         : "string",
             "post_code"     : "string", 
             "location"  : { kötelező
                 "formatted_address": "", //string google mapsből származó `formatted_address`
@@ -761,7 +743,7 @@ Publikusan elérhető.
 
 + Response 201 (application/json)
 
-## Vet [/vet{?query,location_near,location_max_distance,price_category,open_nonstop,has_daycare,has_parking_lot,has_microchipping_service}]
+## Vet [/vet{?query,location_near,location_max_distance,price_category,open_nonstop,has_daycare,has_parking_lot,has_microchipping_service,bounding_box}]
 ### List All Vet [GET]
 
 A rendszerben levő állatkórházak és állatorvosi rendelők listája.
@@ -777,6 +759,7 @@ Publikusan elérhető.
     + has_daycare (optional, boolean, `true`)
     + has_parking_lot (optional, boolean, `true`)
     + has_microchipping_service (optional, boolean, `true`)
+    + bounding_box (optional,double,0.00)
 
 + Response 200 (application/json)
 
@@ -799,14 +782,10 @@ Egy új állatorvosi rendelő ajánlása/létrehozása.
 Publikusan elérhető.
 
 - display_name: kötelező, min 3 karakter, max 255 karakter
-- price_category: optional, egy a következők közül: "cheap", "expensive"
-- open_nonstop: opcionális, default: false
-- has_daycare: opcionális, default: false
-- email: kötelező, string
-- has_parking_lot: opcionális, default: false
-- has_microchipping_service: opcionális, default: false
-- contact_information: opcionális, max 255 karakter
+- email: string
+- phone_number: opcionális, max 255 karakter
 - location: kötelező
+- `are_you_part_of`
 
 + Request (application/json)
 
@@ -1010,11 +989,13 @@ Csak bejelentkezve használható.
 
 - stars: kötelező, a következők egyike: 1,2,3,4,5
 - text: opcionális értékelés szöveg, max 255 karakter
+- price_category 
 
 + Request (application/json)
 
         {
             "stars"    : 3,
+            "price_category": "string"
             "text"   : "string"
         }
 
@@ -1041,7 +1022,7 @@ Nem kell implementálni most.
                 "user"    : {/* User object */},
                 "text"   : "string",
                 "reported_object_type": "string", //enum
-                "reported_object": {/* any object from the system */},
+                "reported_object": id // int,
             }
         ]
 
@@ -1060,14 +1041,10 @@ A `reported_object`-ben levő `id` mezőt kell a `reported_object_type` alapján
 + Response 200 (application/json)
 
         [
-            {
-                "text"   : "string",
-                "reported_object_type": "string",
-                "reported_object": {/* any object from the system */},
-            }
+           
         ]
         
-## Restaurant [/restaurant{?query,location_near,location_max_distance,price,dog_inside,dog_outside,outdoor_heating,water_bowl,big_dogs,parking,dog_food,page}]
+## Restaurant [/restaurant{?query,location_near,location_max_distance,price,dog_inside,dog_outside,outdoor_heating,water_bowl,big_dogs,parking,dog_food,page,bounding_box}]
 ### List All Restaurant [GET]
 
 A rendszerben levő kutyabarát éttermek listája.
@@ -1087,6 +1064,8 @@ Publikusan elérhető.
     + parking (boolean, `false`)
     + dog_food (boolean, `true`)
     + page (number, `0`)
+    + bounding_box (optional,double)
+    
     
 + Response 200 (application/json)
 
@@ -1126,7 +1105,8 @@ Publikusan elérhető.
             "can_serve_big_dogs"      :true,
             "has_parking_lot"       :true,
             "can_serve_dog_food"      :true,
-            "contact_information"       : "string",
+            "phone_number"       : "string",
+            "website"       : "string",
             "related_user"   : null
                
             
@@ -1146,7 +1126,7 @@ Egy új étterem ajánlása/létrehozása.
 - can_serve_big_dogs: opcionális, default: false
 - has_parking_lot: opcionális, default: false
 - can_serve_dog_food: opcionális, default: false
-- contact_information: opcionális, max 255 karakter
+- phone_number: opcionális, max 255 karakter
  "location"  : { kötelező
                             "formatted_address": "", //string google mapsből származó `formatted_address`
                             "lat": 0.0, //float google mapsből származó lat
@@ -1174,7 +1154,7 @@ Egy új étterem ajánlása/létrehozása.
                 "can_serve_big_dogs"      :"boolean",opcionális
                 "has_parking_lot"       :"boolean",opcionális
                 "can_serve_dog_food"      :"boolean",opcionális
-                "contact_information"       : "string",opcionális
+                "phone_number"       : "string",opcionális
                 
         }
 
@@ -1343,6 +1323,7 @@ Csak bejelentkezve használható.
 
         {
             "stars"    : 3,
+            "price_category": "string"
             "text"   : "string"
         }
 
@@ -1362,7 +1343,7 @@ Csak bejelentkezve használható.
         
         
     
-## GroomingSalon [/grooming_salon{?query,location_near,location_max_distance,price_category,has_park_lot,has_shop}]
+## GroomingSalon [/grooming_salon{?query,location_near,location_max_distance,price_category,has_park_lot,has_shop,bounding_box}]
 ### List All GroomingSalon [GET]
 
 A rendszerben levő összes kutyakozmetika listája.
@@ -1376,6 +1357,7 @@ Publikusan elérhető.
     + price_category (array, `price_category[]=cheap,price_category[]=middle,price_category[]=expensive,price_category[]=exclusive`, optional)
     + has_park_lot (boolean, `true`)
     + has_shop (boolean, `false`)
+    + bounding_box (optional,double)
 
 + Response 200 (application/json)
 
@@ -1413,14 +1395,14 @@ Publikusan elérhető.
 - email: kötelező
 - has_shop: opcionális, default: false
 - location: kötelező
-- contact_information: opcionális, max 255 karakter
+- phone_number: opcionális, max 255 karakter
 
 
 + Request (application/json)
 
         {
                 "display_name"          : "string", kötelező
-                "introduction"      : "string",
+                "phone_number"      : "string",
                 "price_category"         : "enum", opcionális
                 "has_park_lot"       : "boolean",opcionális
                 "has_shop"          : "boolean",opcionális
@@ -1616,6 +1598,7 @@ Csak bejelentkezve használható.
 
         {
             "stars"    : 3,
+            "price_category": "string",
             "text"   : "string"
         }
 
@@ -1638,7 +1621,7 @@ Publikusan elérhető.
         
         
         
-## DogPark [/dog_park{?query,location_near,location_max_distance,off_leash,water_taps,dog_waste_bin,page,has_park_lot}]
+## DogPark [/dog_park{?query,location_near,location_max_distance,off_leash,water_taps,dog_waste_bin,page,has_park_lot,bounding_box}]
 ### List All Park [GET]
 
 A rendszerben levő kutyás parkok listája.
@@ -1654,6 +1637,7 @@ Publikusan elérhető.
     + dog_waste_bin (boolean, `true`)
     + page (number, `0`)
     + has_park_lot (boolean,`true`)
+    + bounding_box (optional,double)
     
 + Response 200 (application/json)
 
@@ -1691,7 +1675,7 @@ Publikusan elérhető.
 - dog_waste_bin: opcionális, default: false
 - parking: opcionális, default: false
 - location: kötelező
-- contact: opcionális, max 255 karakter
+- phone_number: opcionális, max 255 karakter
 
 + Request (application/json)
 
@@ -1913,82 +1897,31 @@ Csak bejelentkezve használható.
         
         
 
-## Dog Sightings [/dog/{id}/sighting]
+## Dog Color [/color]
 
-Egy elveszett kutyát hol láttak más felhasználók.
+Kutya szín lista
 
 + Parameters
-    + id (required, number, `1`) - Dog ID
     
-### List all sightings of a dog [GET]
-
-Egy elveszett kutyák hol láttak más felhasználók.
-
-Publikusan elérhető.
+### List all color [GET]
 
 + Response 200 (application/json)
 
         {
-            "total": 50,
-            "per_page": 15,
-            "current_page": 1,
-            "last_page": 4,
-            "next_page_url": "http://laravel.app?page=2",
-            "prev_page_url": null,
-            "from": 1,
-            "to": 15,
-            "data": [
-                {
-                    "id"            : 0,
-                    "text": "string",
-                    "location"  : {
-                        "formatted_address": "", //string google mapsből származó `formatted_address`
-                        "lat": 0.0, //float google mapsből származó lat
-                        "lng": 0.0, //float google mapsből származó lng
-                        /**
-                         * string felhasználó által begépelt/módosított cím
-                         * (opcionális, default: "formatted_address"-ből átmásolt érték)
-                         *
-                         * az esetek döntő többségében ez ugyanaz lesz, mint a `formatted_address`
-                         *
-                         * ha van input mező, ahova a felhasználó megadhat címet, akkor ez annak az input mezőnek az értéke (míg a `formatted_address` a google maps reverse geocodingja által visszaadott string, amit a felhasználó nem módosíthat)
-                         */
-                        "display_address": "", //
-                    },
-                    "related_user"   : {
-                        /* User object */
-                    },
-                }
+            [
+              "id"  : 1,
+              "name": "black"
             ]
         }
 
-### Create a new dog sighting [POST]
+### Create a new color [POST]
 
-"Én is láttam egy ezt a kutyát, ami benne van a barkler elveszett kutyáinak listájában"
-
-Csak bejelentkezés után érhető el.
-
-- text: opcionális, max 2000 karakter
-- location: kötelező
+- name: kotelező, max 2000 karakter
 
 + Request (application/json)
 
         {
-            "text"   : "string",
-            "location"  : {
-                "formatted_address": "", //string google mapsből származó `formatted_address`
-                "lat": 0.0, //float google mapsből származó lat
-                "lng": 0.0, //float google mapsből származó lng
-                /**
-                 * string felhasználó által begépelt/módosított cím
-                 * (opcionális, default: "formatted_address"-ből átmásolt érték)
-                 *
-                 * az esetek döntő többségében ez ugyanaz lesz, mint a `formatted_address`
-                 *
-                 * ha van input mező, ahova a felhasználó megadhat címet, akkor ez annak az input mezőnek az értéke (míg a `formatted_address` a google maps reverse geocodingja által visszaadott string, amit a felhasználó nem módosíthat)
-                 */
-                "display_address": "", //
-            },
+            "name": "black"
         }
 
 + Response 200 (application/json)
@@ -1997,11 +1930,45 @@ Csak bejelentkezés után érhető el.
             
         }
         
-+ Response 422 (application/json)
+        
+        
+        
+        
+## Dog Breed [/breed]
+
+Kutya fajta lista
+
++ Parameters
+    
+### List all breed [GET]
+
++ Response 200 (application/json)
 
         {
-        
+            [
+              "id"  : 1,
+              "name": "welsh corgi"
+            ]
         }
+
+### Create a new breed [POST]
+
+
+- name: opcionális, max 2000 karakter
+
++ Request (application/json)
+
+        {
+            "name": "welsh corgi"
+        }
+
++ Response 200 (application/json)
+
+        {
+            
+        }
+        
+
 
 # Data Structures
 
@@ -2039,7 +2006,7 @@ Csak bejelentkezés után érhető el.
 + type: `charity_organisation` (string)
 + email: `foo@example.com` (string)
 + display_name: `My Organisation` (string)
-+ phone: `+123456789` (string)
++ phone_number: `+123456789` (string)
 + post_code: `1234` (string)
 + location (Location)
 + is_activated: `false` (boolean)
@@ -2093,11 +2060,13 @@ Csak bejelentkezés után érhető el.
 + open_nonstop          : `true` (boolean)
 + has_daycare           : `false` (boolean)
 + has_parking_lot       : `true` (boolean)
++ website               : `wada` (string)
 + location (Location)
 + has_microchipping_service : false (boolean)
-+ contact_information       : `asd street` (string)
++ phone_number       : `` (string)
 + related_user    (User)
 + deleted_at: "0000-00-00 00:00:00" (string)
++ already_voted: (boolean)
 
 ## `Vets_list` (object)
 
@@ -2122,9 +2091,11 @@ Csak bejelentkezés után érhető el.
 + can_serve_big_dogs      :`false` (boolean)
 + has_parking_lot       :`false` (boolean)
 + can_serve_dog_food      :`false` (boolean)
-+ contact_information       : `www.almafa.hu` (string)
++ phone_number       : `12312321` (string)
++ website               : `wada` (string)
 + related_user (User),
 + deleted_at: "0000-00-00 00:00:00" (string)
++ already_voted: (boolean)
 
 ## `Restaurants_list` (object)
 
@@ -2141,7 +2112,8 @@ Csak bejelentkezés után érhető el.
 + id : 0 (number)
 + display_name          : `groomingsalon` (string)
 + average_stars         : 0.0 (number)
-+ introduction      :`grooming salon for dogs` (string)
++ phone_number      :`121321312` (string)
++ website               : `wada` (string)
 + price_category         : `cheap`(string)
 + has_park_lot       : `false `(boolean)
 + has_shop         : `true` (boolean)
@@ -2150,6 +2122,7 @@ Csak bejelentkezés után érhető el.
 + created_at    : `0000-00-00 00:00:00`(string)
 + updated_at    :`0000-00-00 00:00:00`(string)
 + deleted_at: `0000-00-00 00:00:00` (string)
++ already_voted: (boolean)
 
 ## `GroomingSalon_list` (object)
 
@@ -2173,9 +2146,10 @@ Csak bejelentkezés után érhető el.
 + dog_waste_bin : false (boolean)
 + parking       : false (boolean)
 + location (Location)
-+ contact      : `asd `(string)
++ phone_number      : `asd `(string)
 + created_at: `0000-00-00 00:00:00` (string)
 + deleted_at: `0000-00-00 00:00:00` (string)
++ already_voted: (boolean)
 
 ## `DogParks_list` (object)
 
@@ -2206,3 +2180,11 @@ Csak bejelentkezés után érhető el.
 + from: 1 (number)
 + to: 15 (number)
 + data: Review, Review, Review (array[Review])
+
+## Color (object)
++ id: 1 (number)
++ name: "black" (string)
+
+## Breed (object)
++ id: 1 (number)
++ name: "Welsh Corgi" (string)
